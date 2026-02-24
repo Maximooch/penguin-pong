@@ -37,6 +37,58 @@
         .hidden {
             display: none !important;
         }
+        .overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 4px solid #fff;
+            padding: 40px;
+            text-align: center;
+            color: #fff;
+            min-width: 300px;
+        }
+        .overlay h2 {
+            font-size: 36px;
+            margin-bottom: 30px;
+        }
+        .overlay button {
+            display: block;
+            width: 100%;
+            padding: 12px 24px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            background: #000;
+            color: #fff;
+            border: 2px solid #fff;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .overlay button:hover {
+            background: #fff;
+            color: #000;
+        }
+        .settings-option {
+            margin: 20px 0;
+            text-align: left;
+        }
+        .settings-option label {
+            display: block;
+            margin-bottom: 8px;
+        }
+        .settings-option input[type="range"] {
+            width: 100%;
+        }
+        .settings-option select {
+            width: 100%;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #fff;
+            border: 2px solid #fff;
+        }
     </style>
 </head>
 <body>
@@ -47,9 +99,25 @@
         <p style="margin-top: 20px;">Press SPACE to start</p>
     </div>
     <canvas id="gameCanvas" class="hidden"></canvas>
+    
+    <!-- Pause Menu -->
+    <div id="pauseMenu" class="overlay hidden">
+        <h2>PAUSED</h2>
+        <button id="resumeBtn">Resume</button>
+        <button id="settingsBtn">Settings</button>
+        <button id="quitBtn">Quit to Menu</button>
+    </div>
+    
+    <!-- Settings Menu -->
+    <div id="settingsMenu" class="overlay hidden">
+        <h2>SETTINGS</h2>
+        <div class="settings-option"><label>Sound Volume</label><input type="range" id="volumeSlider" min="0" max="100" value="50"></div>
+        <div class="settings-option"><label>AI Difficulty</label><select id="difficultySelect"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></div>
+        <div class="settings-option"><label>Ball Speed</label><select id="ballSpeedSelect"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option></select></div>
+        <button id="backBtn">Back</button>
+    </div>
 
     <script>
-        // Audio context for beeps
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
         function playBeep(frequency, duration) {
@@ -76,6 +144,7 @@
 
         // Game state
         let gameRunning = false;
+        let isPaused = false;
         let playerScore = 0;
         let computerScore = 0;
 
@@ -111,15 +180,24 @@
         canvas.height = CANVAS_HEIGHT;
 
         const startScreen = document.getElementById('startScreen');
+        const pauseMenu = document.getElementById('pauseMenu');
+        const settingsMenu = document.getElementById('settingsMenu');
+        
+        // Settings values (stubs for now)
+        let settings = { volume: 0.5, difficulty: 'medium', ballSpeed: 'normal' };
 
         // Input handling
-        const keys = {};
         document.addEventListener('keydown', (e) => {
             keys[e.key.toLowerCase()] = true;
             
             // Start game on space
             if (e.code === 'Space' && !gameRunning) {
                 startGame();
+            }
+            
+            // Toggle pause on ESC
+            if (e.key === 'Escape' && gameRunning) {
+                togglePause();
             }
         });
         document.addEventListener('keyup', (e) => {
@@ -133,9 +211,19 @@
             resetBall();
             gameLoop();
         }
-
-        function resetBall() {
-            ball.x = CANVAS_WIDTH / 2;
+        
+        function togglePause() {
+            isPaused = !isPaused;
+            if (isPaused) {
+                pauseMenu.classList.remove('hidden');
+            } else {
+                pauseMenu.classList.add('hidden');
+            }
+        }
+        
+        function quitToMenu() {
+            gameRunning = false;
+            isPaused = false;
             ball.y = CANVAS_HEIGHT / 2;
             ball.dx = BALL_SPEED * (Math.random() > 0.5 ? 1 : -1);
             ball.dy = BALL_SPEED * (Math.random() > 0.5 ? 1 : -1);
@@ -257,13 +345,33 @@
 
         function gameLoop() {
             if (!gameRunning) return;
-            update();
+            if (!isPaused) update();
             draw();
             requestAnimationFrame(gameLoop);
         }
 
         // Initial draw (for start screen background)
         draw();
+        
+        // Button event listeners
+        document.getElementById('resumeBtn').addEventListener('click', () => {
+            togglePause();
+        });
+        
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+            pauseMenu.classList.add('hidden');
+            settingsMenu.classList.remove('hidden');
+        });
+        
+        document.getElementById('quitBtn').addEventListener('click', quitToMenu);
+        
+        document.getElementById('backBtn').addEventListener('click', () => {
+            settingsMenu.classList.add('hidden');
+            pauseMenu.classList.remove('hidden');
+            // Save settings (stub)
+            settings.volume = document.getElementById('volumeSlider').value / 100;
+            settings.difficulty = document.getElementById('difficultySelect').value;
+            settings.ballSpeed = document.getElementById('ballSpeedSelect').value;
+        });
     </script>
-</body>
 </html>
