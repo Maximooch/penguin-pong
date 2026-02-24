@@ -4,6 +4,10 @@ A classic Pong game built with vanilla HTML5 Canvas and JavaScript. No framework
 
 ## Play Now
 
+**Live:** [https://pong-cgwxah129-maximoochs-projects.vercel.app](https://pong-cgwxah129-maximoochs-projects.vercel.app)
+
+Or run locally:
+
 ```bash
 python -m http.server 8080
 ```
