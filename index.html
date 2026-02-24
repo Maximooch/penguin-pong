@@ -127,7 +127,7 @@
             gainNode.connect(audioCtx.destination);
             oscillator.frequency.value = frequency;
             oscillator.type = 'square';
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(settings.volume * 0.2, audioCtx.currentTime);
             oscillator.start();
             setTimeout(() => oscillator.stop(), duration);
         }
@@ -209,15 +209,23 @@
             gameRunning = true;
             startScreen.classList.add('hidden');
             canvas.classList.remove('hidden');
+            applySettings();
             resetBall();
             gameLoop();
+        }
         }
 
         function resetBall() {
             ball.x = CANVAS_WIDTH / 2;
             ball.y = CANVAS_HEIGHT / 2;
-            ball.dx = BALL_SPEED * (Math.random() > 0.5 ? 1 : -1);
-            ball.dy = BALL_SPEED * (Math.random() > 0.5 ? 1 : -1);
+            const speedMultiplier = { slow: 0.6, normal: 1, fast: 1.5 }[settings.ballSpeed];
+            const actualSpeed = BALL_SPEED * speedMultiplier;
+            ball.dx = actualSpeed * (Math.random() > 0.5 ? 1 : -1);
+            ball.dy = actualSpeed * (Math.random() > 0.5 ? 1 : -1);
+        }
+        
+        function applySettings() {
+            computer.speed = { easy: 2, medium: 4, hard: 6 }[settings.difficulty];
         }
         
         function togglePause() {
@@ -232,9 +240,14 @@
         function quitToMenu() {
             gameRunning = false;
             isPaused = false;
-            ball.y = CANVAS_HEIGHT / 2;
-            ball.dx = BALL_SPEED * (Math.random() > 0.5 ? 1 : -1);
-            ball.dy = BALL_SPEED * (Math.random() > 0.5 ? 1 : -1);
+            pauseMenu.classList.add('hidden');
+            settingsMenu.classList.add('hidden');
+            canvas.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            playerScore = 0;
+            computerScore = 0;
+            player.y = CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2;
+            computer.y = CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2;
         }
 
         function update() {
