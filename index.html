@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+        }
+        #gameCanvas {
+            border: 4px solid #fff;
+        }
+        #startScreen {
+            position: absolute;
+            color: #fff;
+            text-align: center;
+        }
+        #startScreen h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        #startScreen p {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="startScreen">
+        <h1>PONG</h1>
+        <p>Player: W / S keys</p>
+        <p>First to 5 wins</p>
+        <p style="margin-top: 20px;">Press SPACE to start</p>
+    </div>
+    <canvas id="gameCanvas" class="hidden"></canvas>
+
+    <script>
+        // Audio context for beeps
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playBeep(frequency, duration) {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.frequency.value = frequency;
+            oscillator.type = 'square';
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            oscillator.start();
+            setTimeout(() => oscillator.stop(), duration);
+        }
+
+        // Game constants
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 500;
+        const PADDLE_WIDTH = 12;
+        const PADDLE_HEIGHT = 80;
+        const BALL_SIZE = 12;
+        const PADDLE_SPEED = 6;
+        const BALL_SPEED = 5;
+        const WIN_SCORE = 5;
+
+        // Game state
+        let gameRunning = false;
+        let playerScore = 0;
+        let computerScore = 0;
+
+        // Game objects
+        const player = {
+            x: 20,
+            y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2,
+            width: PADDLE_WIDTH,
+            height: PADDLE_HEIGHT,
+            dy: 0
+        };
+
+        const computer = {
+            x: CANVAS_WIDTH - 20 - PADDLE_WIDTH,
+            y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2,
+            width: PADDLE_WIDTH,
+            height: PADDLE_HEIGHT,
+            speed: 4
+        };
+
+        const ball = {
+            x: CANVAS_WIDTH / 2,
+            y: CANVAS_HEIGHT / 2,
+            size: BALL_SIZE,
+            dx: BALL_SPEED,
+            dy: BALL_SPEED
+        };
+
+        // Canvas setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        const startScreen = document.getElementById('startScreen');
+
+        // Input handling
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            
+            // Start game on space
+            if (e.code === 'Space' && !gameRunning) {
+                startGame();
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        function startGame() {
+            gameRunning = true;
+            startScreen.classList.add('hidden');
+            canvas.classList.remove('hidden');
+            resetBall();
+            gameLoop();
+        }
+
+        function resetBall() {
+            ball.x = CANVAS_WIDTH / 2;
+            ball.y = CANVAS_HEIGHT / 2;
+            ball.dx = BALL_SPEED * (Math.random() > 0.5 ? 1 : -1);
+            ball.dy = BALL_SPEED * (Math.random() > 0.5 ? 1 : -1);
+        }
+
+        function update() {
+            // Player movement
+            if (keys['w'] && player.y > 0) {
+                player.y -= PADDLE_SPEED;
+            }
+            if (keys['s'] && player.y < CANVAS_HEIGHT - PADDLE_HEIGHT) {
+                player.y += PADDLE_SPEED;
+            }
+
+            // Computer AI (follows ball with slight delay)
+            const computerCenter = computer.y + computer.height / 2;
+            const ballCenter = ball.y;
+            if (computerCenter < ballCenter - 20) {
+                computer.y += computer.speed;
+            } else if (computerCenter > ballCenter + 20) {
+                computer.y -= computer.speed;
+            }
+            // Keep computer in bounds
+            computer.y = Math.max(0, Math.min(CANVAS_HEIGHT - computer.height, computer.y));
+
+            // Ball movement
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Ball collision with top/bottom walls
+            if (ball.y <= 0 || ball.y >= CANVAS_HEIGHT - ball.size) {
+                ball.dy *= -1;
+                playBeep(300, 50);
+            }
+
+            // Ball collision with paddles
+            // Player paddle
+            if (ball.x <= player.x + player.width &&
+                ball.y + ball.size >= player.y &&
+                ball.y <= player.y + player.height &&
+                ball.dx < 0) {
+                ball.dx *= -1.05; // Slight speed increase
+                // Add spin based on where ball hits paddle
+                const hitPos = (ball.y - player.y) / player.height;
+                ball.dy = (hitPos - 0.5) * BALL_SPEED * 2;
+                playBeep(500, 50);
+            }
+
+            // Computer paddle
+            if (ball.x + ball.size >= computer.x &&
+                ball.y + ball.size >= computer.y &&
+                ball.y <= computer.y + computer.height &&
+                ball.dx > 0) {
+                ball.dx *= -1.05;
+                const hitPos = (ball.y - computer.y) / computer.height;
+                ball.dy = (hitPos - 0.5) * BALL_SPEED * 2;
+                playBeep(500, 50);
+            }
+
+            // Scoring
+            if (ball.x < 0) {
+                computerScore++;
+                playBeep(200, 150);
+                checkWin();
+                resetBall();
+            }
+            if (ball.x > CANVAS_WIDTH) {
+                playerScore++;
+                playBeep(600, 150);
+                checkWin();
+                resetBall();
+            }
+        }
+
+        function checkWin() {
+            if (playerScore >= WIN_SCORE) {
+                alert('You Win!');
+                resetGame();
+            } else if (computerScore >= WIN_SCORE) {
+                alert('Computer Wins!');
+                resetGame();
+            }
+        }
+
+        function resetGame() {
+            playerScore = 0;
+            computerScore = 0;
+            player.y = CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2;
+            computer.y = CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2;
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Draw center line (dashed)
+            ctx.strokeStyle = '#fff';
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.moveTo(CANVAS_WIDTH / 2, 0);
+            ctx.lineTo(CANVAS_WIDTH / 2, CANVAS_HEIGHT);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw paddles
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            ctx.fillRect(computer.x, computer.y, computer.width, computer.height);
+
+            // Draw ball
+            ctx.fillRect(ball.x, ball.y, ball.size, ball.size);
+
+            // Draw scores
+            ctx.font = '48px Courier New';
+            ctx.fillText(playerScore, CANVAS_WIDTH / 4, 50);
+            ctx.fillText(computerScore, 3 * CANVAS_WIDTH / 4 - 24, 50);
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initial draw (for start screen background)
+        draw();
+    </script>
+</body>
+</html>
