@@ -212,6 +212,13 @@
             resetBall();
             gameLoop();
         }
+
+        function resetBall() {
+            ball.x = CANVAS_WIDTH / 2;
+            ball.y = CANVAS_HEIGHT / 2;
+            ball.dx = BALL_SPEED * (Math.random() > 0.5 ? 1 : -1);
+            ball.dy = BALL_SPEED * (Math.random() > 0.5 ? 1 : -1);
+        }
         
         function togglePause() {
             isPaused = !isPaused;
