@@ -190,7 +190,12 @@
         // Input handling
         document.addEventListener('keydown', (e) => {
             keys[e.key.toLowerCase()] = true;
-            
+
+            // Resume audio on first user gesture (browser autoplay policy)
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
             // Start game on space
             if (e.code === 'Space' && !gameRunning) {
                 startGame();
